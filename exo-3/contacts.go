@@ -41,7 +41,7 @@ type Employe struct {
 // FicheEmploye retourne toutes les infos de l'employé
 func (e Employe) FicheEmploye() string {
 	return fmt.Sprintf(
-		"--- Fiche Employé ---\n  Nom     : %s\n  Age     : %d\n  Email   : %s\n  Poste   : %s\n  Salaire : %.2f€\n  Adresse : %s",
+		"Fiche Employé :\n  Nom     : %s\n  Age     : %d\n  Email   : %s\n  Poste   : %s\n  Salaire : %.2f€\n  Adresse : %s",
 		e.NomComplet(), e.Age, e.Email, e.Poste, e.Salaire, e.Adresse.Format(),
 	)
 }
@@ -49,6 +49,38 @@ func (e Employe) FicheEmploye() string {
 // Sans * on modifierait une copie et l'original ne changerait pas
 func (e *Employe) AugmenterSalaire(pourcent float64) {
 	e.Salaire += e.Salaire * pourcent / 100
+}
+
+// struct Etudiant (embedding Personne) ---
+
+type Etudiant struct {
+	Personne // peut utiliser les champs et méthodes de Personne directement
+	Promo    string
+	Moyenne  float64
+}
+
+// Retourne la mention selon la moyenne avec un switch
+// pas de fallthrough, on s'arrète direct à la bonne mention
+func (e Etudiant) MentionObtenue() string {
+	switch {
+	case e.Moyenne >= 16:
+		return "Très Bien"
+	case e.Moyenne >= 14:
+		return "Bien"
+	case e.Moyenne >= 12:
+		return "Assez Bien"
+	case e.Moyenne >= 10:
+		return "Passable"
+	default:
+		return "Insuffisant"
+	}
+}
+
+func (e Etudiant) FicheEtudiant() string {
+	return fmt.Sprintf(
+		"Fiche Étudiant :\n  Nom     : %s\n  Age     : %d\n  Promo   : %s\n  Moyenne : %.2f\n  Mention : %s",
+		e.NomComplet(), e.Age, e.Promo, e.Moyenne, e.MentionObtenue(),
+	)
 }
 
 func main() {
@@ -85,5 +117,23 @@ func main() {
 	// afficher les infos des employés
 	for _, e := range employes {
 		fmt.Println(e.FicheEmploye())
+	}
+
+	// --- Étudiants dans une slice ---
+	etudiants := []Etudiant{
+		{
+			Personne: Personne{Prenom: "Clara", Nom: "Petit", Age: 21, Email: "clara@univ.fr"},
+			Promo:    "M2IW 2026",
+			Moyenne:  17.5,
+		},
+		{
+			Personne: Personne{Prenom: "Tom", Nom: "Renard", Age: 22, Email: "tom@univ.fr"},
+			Promo:    "M2IW 2026",
+			Moyenne:  11.8,
+		},
+	}
+
+	for _, et := range etudiants {
+		fmt.Println(et.FicheEtudiant())
 	}
 }
