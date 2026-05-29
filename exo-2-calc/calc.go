@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// fonction qui prend deux nombres et une opération, et retourne le résultat de l'opération
+// fonction qui prend deux nombres et une opération, et retourne s'il y a erreur
 func operer(a, b float64, op string) (float64, error) {
 	switch op {
 	case "+":
@@ -24,7 +24,7 @@ func operer(a, b float64, op string) (float64, error) {
 	}
 }
 
-// fonction qui prend une opération et retourne une fonction qui effectue cette opération
+// fonction qui prend une opération et retourne une fonction qui effectue cette opération, en utilisant une closure
 func creerOperation(op string) func(float64, float64) float64 {
 	switch op {
 	case "+":
@@ -52,11 +52,15 @@ func main() {
 			break
 		}
 
-		result, err := operer(a, b, op)
+		// operer valide l'opération et gère les erreurs
+		_, err := operer(a, b, op)
 		if err != nil {
 			fmt.Println("Erreur :", err)
-		} else {
-			fmt.Println("Résultat :", result)
+			continue
 		}
+
+		// creerOperation retourne une closure pour effectuer le calcul
+		fn := creerOperation(op)
+		fmt.Println("Résultat :", fn(a, b))
 	}
 }
