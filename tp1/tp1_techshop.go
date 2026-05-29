@@ -30,6 +30,7 @@ func (c *Catalogue) AjouterProduit(p Produit) error {
 			return fmt.Errorf("produit avec l'ID %d déjà existant", p.ID)
 		}
 	}
+	// Ajoute le produit à la slice
 	c.Produits = append(c.Produits, p)
 	return nil
 }
@@ -64,6 +65,7 @@ func (c *Catalogue) AppliquerReduction(categorie string, pct float64) int {
 	count := 0
 	for i, p := range c.Produits {
 		if strings.EqualFold(p.Categorie, categorie) {
+			// Modifie directement le prix dans la slice
 			c.Produits[i].Prix -= c.Produits[i].Prix * pct / 100
 			count++
 		}
@@ -80,11 +82,22 @@ func (c *Catalogue) Vendre(id int, qte int) error {
 			if p.Stock < qte {
 				return fmt.Errorf("stock insuffisant pour '%s' (stock: %d, demandé: %d)", p.Nom, p.Stock, qte)
 			}
+			// Modifie directement le stock dans la slice
 			c.Produits[i].Stock -= qte
 			return nil
 		}
 	}
 	return errors.New("produit introuvable")
+}
+
+// Retourne un résumé : nb produits et valeur totale du stock
+// Pas de pointer receiver : on lit seulement
+func (c Catalogue) Rapport() string {
+	total := 0.0
+	for _, p := range c.Produits {
+		total += p.Prix * float64(p.Stock)
+	}
+	return fmt.Sprintf("Catalogue : %d produits | Valeur totale du stock : %.2f€", len(c.Produits), total)
 }
 
 func main() {
@@ -98,55 +111,79 @@ func main() {
 		},
 	}
 
-	// test AjouterProduit
-	nouveau := Produit{ID: 6, Nom: "Sony WH-1000XM5", Marque: "Sony", Prix: 349.00, Stock: 7, Categorie: "Audio", Actif: true}
-	if err := catalogue.AjouterProduit(nouveau); err != nil {
-		fmt.Println("Erreur :", err)
-	} else {
-		fmt.Println("Produit ajouté :", nouveau.Nom)
-	}
+	for {
+		fmt.Println("\n=== TechShop ===")
+		fmt.Println("[1] Ajouter  [2] Chercher  [3] Soldes  [4] Vendre  [5] Rapport  [0] Quitter")
+		fmt.Print("Choix : ")
 
-	// test doublon
-	if err := catalogue.AjouterProduit(Produit{ID: 1, Nom: "Doublon"}); err != nil {
-		fmt.Println("Erreur :", err)
-	}
+		var choix int
+		fmt.Scan(&choix)
 
-	// test TrouverParID
-	fmt.Println("\nTrouverParID")
-	if p, err := catalogue.TrouverParID(3); err != nil {
-		fmt.Println("Erreur :", err)
-	} else {
-		fmt.Printf("Trouvé : [%d] %s - %.2f€\n", p.ID, p.Nom, p.Prix)
-	}
-	if _, err := catalogue.TrouverParID(99); err != nil {
-		fmt.Println("Erreur :", err)
-	}
+		switch choix {
+		case 0:
+			fmt.Println("Fermeture du menu")
+			return
 
-	// test TrouverParCategorie
-	fmt.Println("\n TrouverParCategorie : audio")
-	resultats := catalogue.TrouverParCategorie("audio")
-	for _, p := range resultats {
-		fmt.Printf("  [%d] %s\n", p.ID, p.Nom)
-	}
+		case 1: // Ajouter un produit
+			var p Produit
+			fmt.Print("ID : ")
+			fmt.Scan(&p.ID)
+			fmt.Print("Nom : ")
+			fmt.Scan(&p.Nom)
+			fmt.Print("Marque : ")
+			fmt.Scan(&p.Marque)
+			fmt.Print("Prix : ")
+			fmt.Scan(&p.Prix)
+			fmt.Print("Stock : ")
+			fmt.Scan(&p.Stock)
+			fmt.Print("Categorie : ")
+			fmt.Scan(&p.Categorie)
+			p.Actif = true
+			if err := catalogue.AjouterProduit(p); err != nil {
+				fmt.Println("Erreur :", err)
+			} else {
+				fmt.Println("Produit ajouté :", p.Nom)
+			}
 
-	// test AppliquerReduction
-	fmt.Println("\nAppliquerReduction : -20% sur Smartphone")
-	n := catalogue.AppliquerReduction("Smartphone", 20)
-	fmt.Printf("%d produit(s) modifié(s)\n", n)
-	for _, p := range catalogue.TrouverParCategorie("Smartphone") {
-		fmt.Printf("  [%d] %s → %.2f€\n", p.ID, p.Nom, p.Prix)
-	}
+		case 2: // Chercher par ID
+			var id int
+			fmt.Print("ID du produit : ")
+			fmt.Scan(&id)
+			if p, err := catalogue.TrouverParID(id); err != nil {
+				fmt.Println("Erreur :", err)
+			} else {
+				fmt.Printf("[%d] %s - %s - %.2f€ (stock: %d, catégorie: %s)\n",
+					p.ID, p.Nom, p.Marque, p.Prix, p.Stock, p.Categorie)
+			}
 
-	// test Vendre
-	fmt.Println("\nVendre")
-	if err := catalogue.Vendre(1, 3); err != nil {
-		fmt.Println("Erreur :", err)
-	} else {
-		p, _ := catalogue.TrouverParID(1)
-		fmt.Printf("Vendu 3x iPhone 15 → stock restant : %d\n", p.Stock)
-	}
-	// stock insuffisant
-	if err := catalogue.Vendre(2, 100); err != nil {
-		fmt.Println("Erreur :", err)
+		case 3: // Appliquer une réduction sur une catégorie
+			var cat string
+			var pct float64
+			fmt.Print("Catégorie : ")
+			fmt.Scan(&cat)
+			fmt.Print("Réduction (%) : ")
+			fmt.Scan(&pct)
+			n := catalogue.AppliquerReduction(cat, pct)
+			fmt.Printf("%d produit(s) mis en solde (-%.0f%%)\n", n, pct)
+
+		case 4: // Vendre
+			var id, qte int
+			fmt.Print("ID du produit : ")
+			fmt.Scan(&id)
+			fmt.Print("Quantité : ")
+			fmt.Scan(&qte)
+			if err := catalogue.Vendre(id, qte); err != nil {
+				fmt.Println("Erreur :", err)
+			} else {
+				p, _ := catalogue.TrouverParID(id)
+				fmt.Printf("Vente OK — stock restant pour '%s' : %d\n", p.Nom, p.Stock)
+			}
+
+		case 5: // Rapport
+			fmt.Println(catalogue.Rapport())
+
+		default:
+			fmt.Println("Choix invalide")
+		}
 	}
 }
